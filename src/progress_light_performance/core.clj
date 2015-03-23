@@ -19,24 +19,32 @@
                                                     throttle ~wait)]
     ~@body))
 
-(defn test1 [n]
+(defn test1
+  "no throttling"
+  [n]
   (progress/init n)
   (dotimes [i n] (progress/tick))
   (progress/done))
 
-(defn test2 [n]
+(defn test2
+  "async throttling implementation"
+  [n]
   (let [p-light (progress-light/progress-light)]
     (progress-light/monitor-progress p-light n)
     (dotimes [i n] (progress-light/tick p-light))
     (progress-light/done p-light)))
 
-(defn test3 [n]
+(defn test3
+  "updating once per seconds"
+  [n]
   (with-throttle 1000
     (progress/init n)
     (dotimes [i n] (progress/tick))
     (progress/done)))
 
-(defn test4 [n]
+(defn test4
+  "updating once per millisecond"
+  [n]
   (with-throttle 1
     (progress/init n)
     (dotimes [i n] (progress/tick))
@@ -45,7 +53,8 @@
 (defmacro run
   [handler]
   `(progress/with-progress
-    (println "Running" ~(name handler) ":")
+    (println "Running" ~(name handler)
+             "(" (-> ~handler var meta :doc) "):")
     (time (~handler 1000000))))
 
 (defn -main
