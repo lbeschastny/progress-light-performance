@@ -3,6 +3,22 @@
             [clj-progress.core :as progress])
   (:gen-class))
 
+(defn throttle
+  [func]
+  (let [prev  (atom 0)
+        delta 1000000]
+    (fn [& args]
+      (let [now (. System (nanoTime))]
+        (when (> (- now @prev) delta)
+          (reset! prev now)
+          (apply func args))))))
+
+(defmacro with-throttle [& body]
+  `(binding [progress/*progress-handler* (update-in progress/*progress-handler*
+                                                    [:tick]
+                                                    throttle)]
+    ~@body))
+
 (defn test1 [n]
   (progress/init n)
   (dotimes [i n] (progress/tick))
@@ -14,9 +30,21 @@
     (dotimes [i n] (progress-light/tick p-light))
     (progress-light/done p-light)))
 
+(defn test3 [n]
+  (with-throttle
+    (progress/init n)
+    (dotimes [i n] (progress/tick))
+    (progress/done)))
+
+(defmacro run
+  [handler]
+  `(progress/with-progress
+    (println "Running" ~(name handler) ":")
+    (time (~handler 1000000))))
+
 (defn -main
   "Benchmark performance of clj-progress versus progress-light"
   [& args]
-  (let [n 1000000]
-    (time (test2 n))
-    (time (test1 n))))
+  (run test3)
+  (run test2)
+  (run test1))
