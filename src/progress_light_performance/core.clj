@@ -4,19 +4,19 @@
   (:gen-class))
 
 (defn throttle
-  [func]
+  [func wait]
   (let [prev  (atom 0)
-        delta 1000000]
+        delta (* wait 1000000)] ; milliseconds
     (fn [& args]
       (let [now (. System (nanoTime))]
         (when (> (- now @prev) delta)
           (reset! prev now)
           (apply func args))))))
 
-(defmacro with-throttle [& body]
+(defmacro with-throttle [wait & body]
   `(binding [progress/*progress-handler* (update-in progress/*progress-handler*
                                                     [:tick]
-                                                    throttle)]
+                                                    throttle ~wait)]
     ~@body))
 
 (defn test1 [n]
@@ -31,7 +31,13 @@
     (progress-light/done p-light)))
 
 (defn test3 [n]
-  (with-throttle
+  (with-throttle 1000
+    (progress/init n)
+    (dotimes [i n] (progress/tick))
+    (progress/done)))
+
+(defn test4 [n]
+  (with-throttle 1
     (progress/init n)
     (dotimes [i n] (progress/tick))
     (progress/done)))
@@ -45,6 +51,7 @@
 (defn -main
   "Benchmark performance of clj-progress versus progress-light"
   [& args]
+  (run test4)
   (run test3)
   (run test2)
   (run test1))
