@@ -3,21 +3,7 @@
             [clj-progress.core :as progress])
   (:gen-class))
 
-(defn throttle
-  [func wait]
-  (let [prev  (atom 0)
-        delta (* wait 1000000)] ; milliseconds
-    (fn [& args]
-      (let [now (. System (nanoTime))]
-        (when (> (- now @prev) delta)
-          (reset! prev now)
-          (apply func args))))))
-
-(defmacro with-throttle [wait & body]
-  `(binding [progress/*progress-handler* (update-in progress/*progress-handler*
-                                                    [:tick]
-                                                    throttle ~wait)]
-    ~@body))
+(progress/set-throttle! 0)
 
 (defn test1
   "no throttling"
@@ -37,15 +23,15 @@
 (defn test3
   "updating once per seconds"
   [n]
-  (with-throttle 1000
+  (progress/with-throttle 1000
     (progress/init n)
     (dotimes [i n] (progress/tick))
     (progress/done)))
 
 (defn test4
-  "updating once per millisecond"
+  "updating once per 20 milliseconds"
   [n]
-  (with-throttle 1
+  (progress/with-throttle 20
     (progress/init n)
     (dotimes [i n] (progress/tick))
     (progress/done)))
